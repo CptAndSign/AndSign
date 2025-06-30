@@ -24,8 +24,10 @@
       text-decoration: none;
       color: #007bff;
     }
-    .hero {
+    
+.hero {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   padding: 5rem 2rem;
@@ -35,7 +37,21 @@
 }
 
 .hero-content {
-  max-width: 700px;
+  flex: 1 1 300px;
+  max-width: 600px;
+  padding: 1rem;
+}
+
+.hero-image {
+  flex: 1 1 300px;
+  max-width: 500px;
+  padding: 1rem;
+}
+
+.hero-image img {
+  width: 100%;
+  height: auto;
+  border-radius: 1rem;
 }
 
 .hero h2 {
@@ -62,6 +78,13 @@
 .cta-btn:hover {
   background: #0056b3;
   color: white;
+}
+
+@media (max-width: 768px) {
+  .hero {
+    flex-direction: column;
+    text-align: center;
+  }
 }
 
     .section {
@@ -132,11 +155,17 @@
   </nav>
 </header>
 
-  <section class="hero">
+<section class="hero">
+  <div class="hero-content">
     <h2>Frictionless Design Sign-offs for Engineering Teams</h2>
     <p>Collaborate visually, track versions, and generate QR-verified approvals — all without uploading a single file.</p>
     <a href="#" class="cta-btn">Get Started Free</a>
-  </section>
+  </div>
+  <div class="hero-image">
+    <img src="https://via.placeholder.com/500x400.png?text=Your+Illustration" alt="Illustration of design sign-off process">
+  </div>
+</section>
+
 
   <section class="section">
     <h3>How It Works</h3>
