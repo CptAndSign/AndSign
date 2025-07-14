@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - AndSign</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <header>
+    <h1>AndSign Dashboard</h1>
+    <button onclick="logout()">Logout</button>
+  </header>
+
+  <main>
+    <section class="design-preview">
+      <h2>Current Design</h2>
+      <img src="../images/sample-drawing.png" alt="Sample Design" />
+    </section>
+
+    <section class="checklist">
+      <h2>Checklist</h2>
+      <ul>
+        <li><input type="checkbox" /> Dimensions verified</li>
+        <li><input type="checkbox" /> Material spec confirmed</li>
+        <li><input type="checkbox" /> Client comments resolved</li>
+        <li><input type="checkbox" /> Safety compliant</li>
+      </ul>
+    </section>
+
+    <section class="rag-status">
+      <h2>Status</h2>
+      <label><input type="radio" name="status" value="Red" /> Red</label>
+      <label><input type="radio" name="status" value="Amber" /> Amber</label>
+      <label><input type="radio" name="status" value="Green" /> Green</label>
+    </section>
+
+    <button>Confirm Sign-Off</button>
+  </main>
+</body>
+</html>
