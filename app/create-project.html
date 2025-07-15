@@ -2,25 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create Project - AndSign</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signInWithPopup,
+      GoogleAuthProvider
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore,
       doc,
       setDoc,
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import {
-      getAuth,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
-    // Replace with your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCByZfSQ-eaSJ7rrp8RSqvxkLYMWIQCAOY",
       authDomain: "andsign-a18bf.firebaseapp.com",
@@ -31,118 +31,134 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth();
+    const db = getFirestore(app);
+    const functions = getFunctions();
 
-    // Preloaded list of known users (can be replaced by admin preload or Cloud Function call)
-    const knownUsers = [
-      { uid: "abc123", email: "alice@example.com", name: "Alice" },
-      { uid: "def456", email: "bob@example.com", name: "Bob" },
-      { uid: "ghi789", email: "carol@example.com", name: "Carol" },
-      { uid: "jkl012", email: "dave@example.com", name: "Dave" }
-    ];
+    let allUsers = [];
 
-    function populateUserOptions(selectEl) {
-      knownUsers.forEach(user => {
+    const populateMultiSelect = (id, users) => {
+      const select = document.getElementById(id);
+      users.forEach(user => {
         const option = document.createElement("option");
-        option.value = user.email;
+        option.value = user.uid;
         option.textContent = `${user.name} (${user.email})`;
-        selectEl.appendChild(option);
+        select.appendChild(option);
       });
-    }
+    };
 
-    function addEmailSelect(containerId) {
-      const container = document.getElementById(containerId);
-      const select = document.createElement("select");
-      select.className = "mb-2 p-2 border rounded w-full";
-      select.innerHTML = `<option value="">-- Select User --</option>`;
-      populateUserOptions(select);
-      container.appendChild(select);
-    }
+    const getSelectedUIDs = (selectId) => {
+      const select = document.getElementById(selectId);
+      return Array.from(select.selectedOptions).map(opt => opt.value);
+    };
 
-    document.addEventListener("DOMContentLoaded", () => {
-      ["designers", "checkers", "approvers"].forEach(addEmailSelect);
-    });
+    const getUserData = (uids) => {
+      return uids.map(uid => {
+        const user = allUsers.find(u => u.uid === uid);
+        return {
+          uid: user.uid,
+          email: user.email,
+          name: user.name
+        };
+      });
+    };
 
-    async function createProject() {
+    const createProject = async () => {
       const title = document.getElementById("title").value;
       const version = document.getElementById("version").value;
 
-      const createdBy = auth.currentUser?.uid || "unknown";
+      const currentUser = auth.currentUser;
+      if (!currentUser) return alert("You must be signed in.");
 
-      const getSelectedEmails = (containerId) => {
-        const selects = document.getElementById(containerId).querySelectorAll("select");
-        return Array.from(selects)
-          .map(s => s.value)
-          .filter(email => email !== "");
-      };
-
-      const buildRole = (roleName, emailList) => {
-        const eligible = emailList.map(email => {
-          const user = knownUsers.find(u => u.email === email);
-          return {
-            uid: user.uid,
-            email: user.email,
-            name: user.name
-          };
-        });
-        return {
-          role: roleName,
-          eligible,
+      const signatories = [
+        {
+          role: "Designed",
+          eligible: getUserData(getSelectedUIDs("designers")),
           signed: false,
           signedBy: null,
           signedDate: null
-        };
-      };
-
-      const signatories = [
-        buildRole("Designed", getSelectedEmails("designers")),
-        buildRole("Checked", getSelectedEmails("checkers")),
-        buildRole("Approved", getSelectedEmails("approvers"))
+        },
+        {
+          role: "Checked",
+          eligible: getUserData(getSelectedUIDs("checkers")),
+          signed: false,
+          signedBy: null,
+          signedDate: null
+        },
+        {
+          role: "Approved",
+          eligible: getUserData(getSelectedUIDs("approvers")),
+          signed: false,
+          signedBy: null,
+          signedDate: null
+        }
       ];
 
-      const docRef = doc(db, "projects", crypto.randomUUID());
-      await setDoc(docRef, {
+      const projectRef = doc(db, "projects", crypto.randomUUID());
+      await setDoc(projectRef, {
         title,
         version,
         createdAt: serverTimestamp(),
-        createdBy,
+        createdBy: currentUser.uid,
         signatories
       });
 
       alert("Project created successfully!");
-    }
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          const provider = new GoogleAuthProvider();
+          await signInWithPopup(auth, provider);
+          return;
+        }
+
+        const token = await user.getIdTokenResult();
+        const isAdmin = token.claims.isAdmin === true;
+
+        if (!isAdmin) {
+          document.body.innerHTML = "<div class='p-6 text-center text-red-600 font-semibold'>Access denied. You are not an admin.</div>";
+          return;
+        }
+
+        // Fetch users from cloud function
+        try {
+          const getUsers = httpsCallable(functions, "getUsers");
+          const result = await getUsers();
+          allUsers = result.data;
+
+          populateMultiSelect("designers", allUsers);
+          populateMultiSelect("checkers", allUsers);
+          populateMultiSelect("approvers", allUsers);
+        } catch (err) {
+          console.error(err);
+          alert("Failed to load users.");
+        }
+      });
+    });
   </script>
 </head>
 <body class="bg-gray-50 text-gray-900 p-6">
-  <div class="max-w-2xl mx-auto bg-white shadow rounded-xl p-6">
-    <h1 class="text-2xl font-bold mb-4">Create New Project</h1>
+  <div class="max-w-3xl mx-auto bg-white shadow-xl p-8 rounded-xl">
+    <h1 class="text-2xl font-bold mb-6">Create New Project</h1>
 
     <label class="block mb-2 font-medium">Project Title</label>
-    <input id="title" type="text" class="w-full p-2 border rounded mb-4" />
+    <input id="title" type="text" class="w-full border p-2 rounded mb-4" />
 
     <label class="block mb-2 font-medium">Version</label>
-    <input id="version" type="text" class="w-full p-2 border rounded mb-6" />
+    <input id="version" type="text" class="w-full border p-2 rounded mb-6" />
 
-    <div class="mb-6">
-      <h2 class="text-lg font-semibold mb-2">Designers</h2>
-      <div id="designers"></div>
-      <button onclick="addEmailSelect('designers')" class="text-blue-600 mt-2 text-sm">+ Add Designer</button>
-    </div>
+    <label class="block mb-2 font-semibold">Designers</label>
+    <select id="designers" multiple class="w-full border p-2 rounded mb-4 h-32"></select>
 
-    <div class="mb-6">
-      <h2 class="text-lg font-semibold mb-2">Checkers</h2>
-      <div id="checkers"></div>
-      <button onclick="addEmailSelect('checkers')" class="text-blue-600 mt-2 text-sm">+ Add Checker</button>
-    </div>
+    <label class="block mb-2 font-semibold">Checkers</label>
+    <select id="checkers" multiple class="w-full border p-2 rounded mb-4 h-32"></select>
 
-    <div class="mb-6">
-      <h2 class="text-lg font-semibold mb-2">Approvers</h2>
-      <div id="approvers"></div>
-      <button onclick="addEmailSelect('approvers')" class="text-blue-600 mt-2 text-sm">+ Add Approver</button>
-    </div>
+    <label class="block mb-2 font-semibold">Approvers</label>
+    <select id="approvers" multiple class="w-full border p-2 rounded mb-6 h-32"></select>
 
-    <button onclick="createProject()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+    <button onclick="createProject()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl shadow">
       Create Project
     </button>
   </div>
