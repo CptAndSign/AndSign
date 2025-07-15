@@ -4,23 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Project List - AndSign</title>
-  <link rel="stylesheet" href="..css/app.css" />
+  <link rel="stylesheet" href="../css/app.css" />
 </head>
 <body>
 
   <header>
-    <h1>Project List</h1>
-    <a href="dashboard.html">Dashboard</a>
+    <h1>AndSign Projects</h1>
+    <button id="logout-btn">Logout</button>
   </header>
 
   <main>
-    <ul id="project-list"></ul>
+    <section class="project-list">
+      <h2>Your Projects</h2>
+      <ul id="project-list"></ul>
+    </section>
   </main>
 
-  <!-- Firebase Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -36,26 +38,39 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const projectList = document.getElementById("project-list");
-
+    // Protect the page
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "login.html";
         return;
       }
 
-      const snapshot = await getDocs(collection(db, "projects"));
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        console.log("Project data:", data);
-        const li = document.createElement("li");
+      const projectList = document.getElementById("project-list");
 
-        li.innerHTML = `
-          <strong>${data.name}</strong> (v${data.version})
-          <a href="summary.html?id=${doc.id}">View Summary</a>
-        `;
+      try {
+        const querySnapshot = await getDocs(collection(db, "projects"));
+        querySnapshot.forEach((doc) => {
+          const project = doc.data();
+          const projectId = doc.id;
 
-        projectList.appendChild(li);
+          const item = document.createElement("li");
+          item.innerHTML = `
+            <strong>${project.name}</strong> (v${project.version}) 
+            <a href="summary.html?id=${projectId}">View Summary</a>
+          `;
+          projectList.appendChild(item);
+        });
+      } catch (err) {
+        console.error("Error loading projects:", err);
+        alert("Failed to load projects.");
+      }
+    });
+
+    // Logout
+    const logoutBtn = document.getElementById("logout-btn");
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "login.html";
       });
     });
   </script>
