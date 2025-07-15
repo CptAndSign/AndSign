@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project List - AndSign</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+
+  <header>
+    <h1>Project List</h1>
+    <a href="dashboard.html">Dashboard</a>
+  </header>
+
+  <main>
+    <ul id="project-list"></ul>
+  </main>
+
+  <!-- Firebase Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCByZfSQ-eaSJ7rrp8RSqvxkLYMWIQCAOY",
+      authDomain: "andsign-a18bf.firebaseapp.com",
+      projectId: "andsign-a18bf",
+      storageBucket: "andsign-a18bf.appspot.com",
+      messagingSenderId: "682561818074",
+      appId: "1:682561818074:web:279fcbe5b934d5d1d844e3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const projectList = document.getElementById("project-list");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      const snapshot = await getDocs(collection(db, "projects"));
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const li = document.createElement("li");
+
+        li.innerHTML = `
+          <strong>${data.projectName}</strong> (v${data.version})<br/>
+          <a href="summary.html?id=${doc.id}">View Summary</a>
+        `;
+
+        projectList.appendChild(li);
+      });
+    });
+  </script>
+
+</body>
+</html>
