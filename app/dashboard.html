@@ -1,53 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard - AndSign</title>
-  <link rel="stylesheet" href="css/app.css" />
-</head>
-<body>
+<!-- Add this in the <body> of your existing file -->
 
-  <header>
-    <h1>AndSign Dashboard</h1>
-    <button id="logout-btn">Logout</button>
-  </header>
-
-  <main>
-    <section class="design-preview">
-      <h2>Current Design</h2>
-      <img src="../images/sample-drawing.png" alt="Sample Design" />
-    </section>
-
-    <section class="checklist">
-      <h2>Checklist</h2>
-      <ul>
-        <li><input type="checkbox" /> Dimensions verified</li>
-        <li><input type="checkbox" /> Material spec confirmed</li>
-        <li><input type="checkbox" /> Client comments resolved</li>
-        <li><input type="checkbox" /> Safety compliant</li>
-      </ul>
-    </section>
-
-    <h3>Upload Design PDF</h3>
-<input type="file" id="design-file" accept="application/pdf" />
-<button id="upload-btn">Upload PDF</button>
-
-<h3>Preview:</h3>
-<iframe id="pdf-preview" width="100%" height="500px"></iframe>
-
-    <section class="rag-status">
-      <h2>Status</h2>
-      <label><input type="radio" name="status" value="Red" /> Red</label>
-      <label><input type="radio" name="status" value="Amber" /> Amber</label>
-      <label><input type="radio" name="status" value="Green" /> Green</label>
-    </section>
-
-  <button id="signoff-btn">Confirm Sign-Off</button>
-
-  </main>
-
-  <!-- Firebase Logout Script -->
+<!-- Firebase SDKs -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -58,7 +11,7 @@
     apiKey: "AIzaSyAjOE-D9NNV-YPSKoVni-ACCUpKF7B9Ay8",
     authDomain: "andsign-app.firebaseapp.com",
     projectId: "andsign-app",
-    storageBucket: "andsign-app.firebasestorage.app",
+    storageBucket: "andsign-app.appspot.com", // ✅ FIXED HERE
     messagingSenderId: "644185418821",
     appId: "1:644185418821:web:1941cdd7fc21742d06c72c"
   };
@@ -68,7 +21,6 @@
   const db = getFirestore(app);
   const storage = getStorage(app);
 
-  // Protect the page
   onAuthStateChanged(auth, (user) => {
     if (!user) {
       window.location.href = "login.html";
@@ -109,7 +61,7 @@
       });
     });
 
-    // --- PDF UPLOAD ---
+    // --- PDF UPLOAD + PREVIEW ---
     const fileInput = document.getElementById("design-file");
     const uploadBtn = document.getElementById("upload-btn");
     const previewFrame = document.getElementById("pdf-preview");
@@ -127,12 +79,10 @@
 
       try {
         await uploadBytes(fileRef, file, {
-          customMetadata: {
-            uploadedBy: user.uid
-          }
+          customMetadata: { uploadedBy: user.uid }
         });
 
-
+        const fileUrl = await getDownloadURL(fileRef); // ✅ This was missing
         previewFrame.src = fileUrl;
         alert("PDF uploaded and previewed!");
       } catch (err) {
@@ -142,10 +92,3 @@
     });
   });
 </script>
-
-
-
-
-
-</body>
-</html>
