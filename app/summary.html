@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project Summary - AndSign</title>
+  <link rel="stylesheet" href="../css/app.css" />
+  <style>
+    .rag-box {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      margin-left: 8px;
+    }
+    .green { background: green; }
+    .amber { background: orange; }
+    .red { background: red; }
+    .role-status { margin-top: 1rem; }
+    .qr-code { margin-top: 2rem; }
+    @media print {
+      .qr-code canvas { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <main>
+    <h1>Project Summary</h1>
+    <div id="project-info">
+      <p>Loading project...</p>
+    </div>
+
+    <div class="qr-code">
+      <h3>Scan to verify</h3>
+      <div id="qr"></div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+    import QRCode from "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.esm.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCByZfSQ-eaSJ7rrp8RSqvxkLYMWIQCAOY",
+      authDomain: "andsign-a18bf.firebaseapp.com",
+      projectId: "andsign-a18bf",
+      storageBucket: "andsign-a18bf.firebasestorage.app",
+      messagingSenderId: "682561818074",
+      appId: "1:682561818074:web:279fcbe5b934d5d1d844e3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get("projectId");
+    const projectInfoDiv = document.getElementById("project-info");
+
+    if (!projectId) {
+      projectInfoDiv.innerHTML = "<p>Missing project ID.</p>";
+    } else {
+      const projectRef = doc(db, "projects", projectId);
+      getDoc(projectRef).then((snapshot) => {
+        if (!snapshot.exists()) {
+          projectInfoDiv.innerHTML = "<p>Project not found.</p>";
+          return;
+        }
+
+        const data = snapshot.data();
+        const allSigned = data.roles.every(r => r.signed);
+        const someSigned = data.roles.some(r => r.signed);
+        const ragClass = allSigned ? "green" : someSigned ? "amber" : "red";
+
+        const ragHTML = `<span class="rag-box ${ragClass}"></span>`;
+        let html = `
+          <h2>${data.name} <small>v${data.version}</small> ${ragHTML}</h2>
+          <div class="role-status">
+            <ul>
+        `;
+
+        data.roles.forEach(role => {
+          html += `<li>${role.name} - ${role.signed ? "✅ Signed" : "❌ Not signed"}</li>`;
+        });
+
+        html += `</ul></div>`;
+        projectInfoDiv.innerHTML = html;
+
+        // QR Code
+        const qrDiv = document.getElementById("qr");
+        const publicURL = window.location.href;
+        QRCode.toCanvas(publicURL, { width: 200 }, (err, canvas) => {
+          if (!err) qrDiv.appendChild(canvas);
+        });
+
+      }).catch(err => {
+        projectInfoDiv.innerHTML = `<p>Error loading project: ${err.message}</p>`;
+      });
+    }
+  </script>
+
+</body>
+</html>
