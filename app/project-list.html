@@ -19,6 +19,27 @@
       padding-bottom: 0.5rem;
     }
 
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .actions button {
+      background-color: #28a745;
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .actions button:hover {
+      background-color: #218838;
+    }
+
     #project-list {
       list-style: none;
       padding: 0;
@@ -40,17 +61,28 @@
       color: #333;
     }
 
-    #project-list li a {
-      background-color: #007bff;
-      color: white;
-      padding: 0.5rem 1rem;
-      text-decoration: none;
-      border-radius: 4px;
-      font-size: 0.9rem;
+    .project-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    #project-list li a:hover {
+    .project-actions a {
+      background-color: #007bff;
+      color: white;
+      padding: 0.5rem 0.75rem;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .project-actions a:hover {
       background-color: #0056b3;
+    }
+
+    .project-actions img {
+      width: 24px;
+      height: 24px;
     }
 
     header {
@@ -89,7 +121,10 @@
 
   <main>
     <section class="project-list">
-      <h2>Your Projects</h2>
+      <div class="actions">
+        <h2>Your Projects</h2>
+        <button onclick="window.location.href='create-project.html'">+ Create Project</button>
+      </div>
       <ul id="project-list"></ul>
     </section>
   </main>
@@ -112,7 +147,6 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Protect the page
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "login.html";
@@ -122,28 +156,32 @@
       const projectList = document.getElementById("project-list");
 
       try {
-        const querySnapshot = await getDocs(collection(db, "projects"));
-        querySnapshot.forEach((doc) => {
+        const snapshot = await getDocs(collection(db, "projects"));
+        snapshot.forEach((doc) => {
           const project = doc.data();
           const projectId = doc.id;
 
-          const item = document.createElement("li");
-          item.innerHTML = `
+          const li = document.createElement("li");
+          li.innerHTML = `
             <div>
-              <strong>${project.name}</strong> <br/>
+              <strong>${project.name}</strong><br/>
               Version: <code>v${project.version}</code>
             </div>
-            <a href="summary.html?id=${projectId}">View Summary</a>
+            <div class="project-actions">
+              <a href="summary.html?id=${projectId}">Summary</a>
+              <a href="summary.html?id=${projectId}" title="QR Page">
+                <img src="../images/qr-icon.svg" alt="QR Code" />
+              </a>
+            </div>
           `;
-          projectList.appendChild(item);
+          projectList.appendChild(li);
         });
       } catch (err) {
         console.error("Error loading projects:", err);
-        alert("Failed to load projects.");
+        alert("Could not load projects.");
       }
     });
 
-    // Logout
     const logoutBtn = document.getElementById("logout-btn");
     logoutBtn.addEventListener("click", () => {
       signOut(auth).then(() => {
