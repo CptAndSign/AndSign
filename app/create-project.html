@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create Project - AndSign</title>
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+
+  <header>
+    <h1>Create New Project</h1>
+    <button id="logout-btn">Logout</button>
+  </header>
+
+  <main>
+    <form id="project-form">
+      <label for="project-name">Project Name</label>
+      <input type="text" id="project-name" required />
+
+      <label for="version">Version (e.g., P01)</label>
+      <input type="text" id="version" required />
+
+      <label for="roles">Roles to Sign Off (one per line)</label>
+      <textarea id="roles" rows="5" required placeholder="Engineer&#10;QA&#10;Client"></textarea>
+
+      <button type="submit">Create Project</button>
+    </form>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCByZfSQ-eaSJ7rrp8RSqvxkLYMWIQCAOY",
+      authDomain: "andsign-a18bf.firebaseapp.com",
+      projectId: "andsign-a18bf",
+      storageBucket: "andsign-a18bf.firebasestorage.app",
+      messagingSenderId: "682561818074",
+      appId: "1:682561818074:web:279fcbe5b934d5d1d844e3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // 🔐 Protect page
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      // 🧹 Logout handler
+      document.getElementById("logout-btn").addEventListener("click", () => {
+        signOut(auth).then(() => {
+          window.location.href = "login.html";
+        });
+      });
+
+      // ✅ Submit handler
+      const form = document.getElementById("project-form");
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById("project-name").value.trim();
+        const version = document.getElementById("version").value.trim();
+        const rolesRaw = document.getElementById("roles").value.trim();
+        const roles = rolesRaw.split(/\n+/).map(r => r.trim()).filter(Boolean);
+
+        try {
+          const docRef = await addDoc(collection(db, "projects"), {
+            name,
+            version,
+            roles: roles.map(role => ({ name: role, signed: false })),
+            createdBy: user.uid,
+            createdAt: serverTimestamp()
+          });
+
+          alert(`Project created! ID: ${docRef.id}`);
+          window.location.href = "dashboard.html"; // or a project view page later
+        } catch (err) {
+          alert("Error creating project: " + err.message);
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
