@@ -1,94 +1,140 @@
-<!-- Add this in the <body> of your existing file -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard - AndSign</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
 
-<!-- Firebase SDKs -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+  <header>
+    <h1>AndSign Dashboard</h1>
+    <button id="logout-btn">Logout</button>
+  </header>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAjOE-D9NNV-YPSKoVni-ACCUpKF7B9Ay8",
-    authDomain: "andsign-app.firebaseapp.com",
-    projectId: "andsign-app",
-    storageBucket: "andsign-app.appspot.com", // ✅ FIXED HERE
-    messagingSenderId: "644185418821",
-    appId: "1:644185418821:web:1941cdd7fc21742d06c72c"
-  };
+  <main>
+    <section class="design-preview">
+      <h2>Current Design</h2>
+      <img src="../images/sample-drawing.png" alt="Sample Design" />
+    </section>
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  const storage = getStorage(app);
+    <section class="checklist">
+      <h2>Checklist</h2>
+      <ul>
+        <li><input type="checkbox" /> Dimensions verified</li>
+        <li><input type="checkbox" /> Material spec confirmed</li>
+        <li><input type="checkbox" /> Client comments resolved</li>
+        <li><input type="checkbox" /> Safety compliant</li>
+      </ul>
+    </section>
 
-  onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      window.location.href = "login.html";
-      return;
-    }
+    <h3>Upload Design PDF</h3>
+    <input type="file" id="design-file" accept="application/pdf" />
+    <button id="upload-btn">Upload PDF</button>
 
-    // --- SIGN-OFF BUTTON ---
-    const signOffBtn = document.getElementById("signoff-btn");
-    signOffBtn.addEventListener("click", async () => {
-      const checklist = {
-        dimensionsVerified: document.querySelectorAll("input[type=checkbox]")[0].checked,
-        materialConfirmed: document.querySelectorAll("input[type=checkbox]")[1].checked,
-        commentsResolved: document.querySelectorAll("input[type=checkbox]")[2].checked,
-        safetyCompliant: document.querySelectorAll("input[type=checkbox]")[3].checked
-      };
+    <h3>Preview:</h3>
+    <iframe id="pdf-preview" width="100%" height="500px"></iframe>
 
-      const ragStatus = document.querySelector("input[name='status']:checked")?.value || "Not selected";
+    <section class="rag-status">
+      <h2>Status</h2>
+      <label><input type="radio" name="status" value="Red" /> Red</label>
+      <label><input type="radio" name="status" value="Amber" /> Amber</label>
+      <label><input type="radio" name="status" value="Green" /> Green</label>
+    </section>
 
-      try {
-        await addDoc(collection(db, "signoffs"), {
-          userId: user.uid,
-          checklist,
-          ragStatus,
-          timestamp: serverTimestamp()
-        });
+    <button id="signoff-btn">Confirm Sign-Off</button>
+  </main>
 
-        alert("Sign-off saved successfully!");
-      } catch (err) {
-        alert("Error saving sign-off: " + err.message);
-      }
-    });
+  <!-- Firebase Dashboard Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
-    // --- LOGOUT BUTTON ---
-    const logoutBtn = document.getElementById("logout-btn");
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth).then(() => {
+    const firebaseConfig = {
+      apiKey: "AIzaSyAjOE-D9NNV-YPSKoVni-ACCUpKF7B9Ay8",
+      authDomain: "andsign-app.firebaseapp.com",
+      projectId: "andsign-app",
+      storageBucket: "andsign-app.appspot.com",
+      messagingSenderId: "644185418821",
+      appId: "1:644185418821:web:1941cdd7fc21742d06c72c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
         window.location.href = "login.html";
-      });
-    });
-
-    // --- PDF UPLOAD + PREVIEW ---
-    const fileInput = document.getElementById("design-file");
-    const uploadBtn = document.getElementById("upload-btn");
-    const previewFrame = document.getElementById("pdf-preview");
-
-    uploadBtn.addEventListener("click", async () => {
-      const file = fileInput.files[0];
-
-      if (!file || file.type !== "application/pdf") {
-        alert("Please select a PDF file.");
         return;
       }
 
-      const filePath = `designs/${user.uid}/${Date.now()}_${file.name}`;
-      const fileRef = ref(storage, filePath);
+      // --- Sign-Off Save ---
+      document.getElementById("signoff-btn").addEventListener("click", async () => {
+        const checklist = {
+          dimensionsVerified: document.querySelectorAll("input[type=checkbox]")[0].checked,
+          materialConfirmed: document.querySelectorAll("input[type=checkbox]")[1].checked,
+          commentsResolved: document.querySelectorAll("input[type=checkbox]")[2].checked,
+          safetyCompliant: document.querySelectorAll("input[type=checkbox]")[3].checked
+        };
 
-      try {
-        await uploadBytes(fileRef, file, {
-          customMetadata: { uploadedBy: user.uid }
+        const ragStatus = document.querySelector("input[name='status']:checked")?.value || "Not selected";
+
+        try {
+          await addDoc(collection(db, "signoffs"), {
+            userId: user.uid,
+            checklist,
+            ragStatus,
+            timestamp: serverTimestamp()
+          });
+          alert("Sign-off saved successfully!");
+        } catch (err) {
+          alert("Error saving sign-off: " + err.message);
+        }
+      });
+
+      // --- Logout ---
+      document.getElementById("logout-btn").addEventListener("click", () => {
+        signOut(auth).then(() => {
+          window.location.href = "login.html";
         });
+      });
 
-        const fileUrl = await getDownloadURL(fileRef); // ✅ This was missing
-        previewFrame.src = fileUrl;
-        alert("PDF uploaded and previewed!");
-      } catch (err) {
-        console.error("Upload error:", err);
-        alert("Error uploading file: " + err.message);
-      }
+      // --- Upload PDF ---
+      const fileInput = document.getElementById("design-file");
+      const uploadBtn = document.getElementById("upload-btn");
+      const previewFrame = document.getElementById("pdf-preview");
+
+      uploadBtn.addEventListener("click", async () => {
+        const file = fileInput.files[0];
+
+        if (!file || file.type !== "application/pdf") {
+          alert("Please select a PDF file.");
+          return;
+        }
+
+        const filePath = `designs/${user.uid}/${Date.now()}_${file.name}`;
+        const fileRef = ref(storage, filePath);
+
+        try {
+          await uploadBytes(fileRef, file, {
+            customMetadata: { uploadedBy: user.uid }
+          });
+
+          const fileUrl = await getDownloadURL(fileRef);
+          previewFrame.src = fileUrl;
+          alert("PDF uploaded and previewed!");
+        } catch (err) {
+          console.error("Upload error:", err);
+          alert("Error uploading file: " + err.message);
+        }
+      });
     });
-  });
-</script>
+  </script>
+
+</body>
+</html>
