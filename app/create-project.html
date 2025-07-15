@@ -2,37 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create Project - AndSign</title>
-  <link rel="stylesheet" href="../css/app.css" />
-</head>
-<body>
+  <script src="https://cdn.tailwindcss.com"></script>
 
-  <header>
-    <h1>Create New Project</h1>
-    <button id="logout-btn">Logout</button>
-  </header>
-
-  <main>
-    <form id="project-form">
-      <label for="project-name">Project Name</label>
-      <input type="text" id="project-name" required />
-
-      <label for="version">Version (e.g., P01)</label>
-      <input type="text" id="version" required />
-
-      <label for="roles">Roles to Sign Off (one per line)</label>
-      <textarea id="roles" rows="5" required placeholder="Engineer&#10;QA&#10;Client"></textarea>
-
-      <button type="submit">Create Project</button>
-    </form>
-  </main>
-
+  <!-- Firebase SDK -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getAuth,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+    // Replace with your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCByZfSQ-eaSJ7rrp8RSqvxkLYMWIQCAOY",
       authDomain: "andsign-a18bf.firebaseapp.com",
@@ -43,50 +31,120 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
+    const auth = getAuth();
 
-    // 🔐 Protect page
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = "login.html";
-        return;
-      }
+    // Preloaded list of known users (can be replaced by admin preload or Cloud Function call)
+    const knownUsers = [
+      { uid: "abc123", email: "alice@example.com", name: "Alice" },
+      { uid: "def456", email: "bob@example.com", name: "Bob" },
+      { uid: "ghi789", email: "carol@example.com", name: "Carol" },
+      { uid: "jkl012", email: "dave@example.com", name: "Dave" }
+    ];
 
-      // 🧹 Logout handler
-      document.getElementById("logout-btn").addEventListener("click", () => {
-        signOut(auth).then(() => {
-          window.location.href = "login.html";
-        });
+    function populateUserOptions(selectEl) {
+      knownUsers.forEach(user => {
+        const option = document.createElement("option");
+        option.value = user.email;
+        option.textContent = `${user.name} (${user.email})`;
+        selectEl.appendChild(option);
       });
+    }
 
-      // ✅ Submit handler
-      const form = document.getElementById("project-form");
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
+    function addEmailSelect(containerId) {
+      const container = document.getElementById(containerId);
+      const select = document.createElement("select");
+      select.className = "mb-2 p-2 border rounded w-full";
+      select.innerHTML = `<option value="">-- Select User --</option>`;
+      populateUserOptions(select);
+      container.appendChild(select);
+    }
 
-        const name = document.getElementById("project-name").value.trim();
-        const version = document.getElementById("version").value.trim();
-        const rolesRaw = document.getElementById("roles").value.trim();
-        const roles = rolesRaw.split(/\n+/).map(r => r.trim()).filter(Boolean);
-
-        try {
-          const docRef = await addDoc(collection(db, "projects"), {
-            name,
-            version,
-            roles: roles.map(role => ({ name: role, signed: false })),
-            createdBy: user.uid,
-            createdAt: serverTimestamp()
-          });
-
-          alert(`Project created! ID: ${docRef.id}`);
-          window.location.href = "dashboard.html"; // or a project view page later
-        } catch (err) {
-          alert("Error creating project: " + err.message);
-        }
-      });
+    document.addEventListener("DOMContentLoaded", () => {
+      ["designers", "checkers", "approvers"].forEach(addEmailSelect);
     });
-  </script>
 
+    async function createProject() {
+      const title = document.getElementById("title").value;
+      const version = document.getElementById("version").value;
+
+      const createdBy = auth.currentUser?.uid || "unknown";
+
+      const getSelectedEmails = (containerId) => {
+        const selects = document.getElementById(containerId).querySelectorAll("select");
+        return Array.from(selects)
+          .map(s => s.value)
+          .filter(email => email !== "");
+      };
+
+      const buildRole = (roleName, emailList) => {
+        const eligible = emailList.map(email => {
+          const user = knownUsers.find(u => u.email === email);
+          return {
+            uid: user.uid,
+            email: user.email,
+            name: user.name
+          };
+        });
+        return {
+          role: roleName,
+          eligible,
+          signed: false,
+          signedBy: null,
+          signedDate: null
+        };
+      };
+
+      const signatories = [
+        buildRole("Designed", getSelectedEmails("designers")),
+        buildRole("Checked", getSelectedEmails("checkers")),
+        buildRole("Approved", getSelectedEmails("approvers"))
+      ];
+
+      const docRef = doc(db, "projects", crypto.randomUUID());
+      await setDoc(docRef, {
+        title,
+        version,
+        createdAt: serverTimestamp(),
+        createdBy,
+        signatories
+      });
+
+      alert("Project created successfully!");
+    }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 p-6">
+  <div class="max-w-2xl mx-auto bg-white shadow rounded-xl p-6">
+    <h1 class="text-2xl font-bold mb-4">Create New Project</h1>
+
+    <label class="block mb-2 font-medium">Project Title</label>
+    <input id="title" type="text" class="w-full p-2 border rounded mb-4" />
+
+    <label class="block mb-2 font-medium">Version</label>
+    <input id="version" type="text" class="w-full p-2 border rounded mb-6" />
+
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold mb-2">Designers</h2>
+      <div id="designers"></div>
+      <button onclick="addEmailSelect('designers')" class="text-blue-600 mt-2 text-sm">+ Add Designer</button>
+    </div>
+
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold mb-2">Checkers</h2>
+      <div id="checkers"></div>
+      <button onclick="addEmailSelect('checkers')" class="text-blue-600 mt-2 text-sm">+ Add Checker</button>
+    </div>
+
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold mb-2">Approvers</h2>
+      <div id="approvers"></div>
+      <button onclick="addEmailSelect('approvers')" class="text-blue-600 mt-2 text-sm">+ Add Approver</button>
+    </div>
+
+    <button onclick="createProject()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+      Create Project
+    </button>
+  </div>
 </body>
 </html>
