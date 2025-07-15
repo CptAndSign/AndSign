@@ -126,15 +126,12 @@
       const fileRef = ref(storage, filePath);
 
       try {
-        await uploadBytes(fileRef, file);
-        const fileUrl = await getDownloadURL(fileRef);
-
-        await addDoc(collection(db, "designFiles"), {
-          userId: user.uid,
-          fileName: file.name,
-          fileUrl,
-          uploadedAt: serverTimestamp()
+        await uploadBytes(fileRef, file, {
+          customMetadata: {
+            uploadedBy: user.uid
+          }
         });
+
 
         previewFrame.src = fileUrl;
         alert("PDF uploaded and previewed!");
