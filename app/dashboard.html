@@ -14,10 +14,9 @@
   </header>
 
   <main>
-    <section class="design-info">
-      <h2>Current Document</h2>
-      <p><strong>Document:</strong> [Insert document title here]</p>
-      <p><strong>Version:</strong> [Insert version e.g., P01]</p>
+    <section class="design-preview">
+      <h2>Current Design</h2>
+      <img src="../images/sample-drawing.png" alt="Sample Design" />
     </section>
 
     <section class="checklist">
@@ -40,8 +39,61 @@
     <button id="signoff-btn">Confirm Sign-Off</button>
   </main>
 
-  <!-- Firebase Dashboard Logic -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCByZfSQ-eaSJ7rrp8RSqvxkLYMWIQCAOY",
+      authDomain: "andsign-a18bf.firebaseapp.com",
+      projectId: "andsign-a18bf",
+      storageBucket: "andsign-a18bf.firebasestorage.app",
+      messagingSenderId: "682561818074",
+      appId: "1:682561818074:web:279fcbe5b934d5d1d844e3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      document.getElementById("logout-btn").addEventListener("click", () => {
+        signOut(auth).then(() => {
+          window.location.href = "login.html";
+        });
+      });
+
+      document.getElementById("signoff-btn").addEventListener("click", async () => {
+        const checklist = {
+          dimensionsVerified: document.querySelectorAll("input[type=checkbox]")[0].checked,
+          materialConfirmed: document.querySelectorAll("input[type=checkbox]")[1].checked,
+          commentsResolved: document.querySelectorAll("input[type=checkbox]")[2].checked,
+          safetyCompliant: document.querySelectorAll("input[type=checkbox]")[3].checked
+        };
+
+        const ragStatus = document.querySelector("input[name='status']:checked")?.value || "Not selected";
+
+        try {
+          await addDoc(collection(db, "signoffs"), {
+            userId: user.uid,
+            checklist,
+            ragStatus,
+            timestamp: serverTimestamp()
+          });
+
+          alert("Sign-off saved successfully!");
+        } catch (err) {
+          alert("Error saving sign-off: " + err.message);
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
