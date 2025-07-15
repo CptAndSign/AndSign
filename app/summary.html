@@ -4,9 +4,105 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Document Summary - AndSign</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- QRCode SVG Generator -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/dist/qrcode.min.js"></script>
-  <script defer src="summary.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCByZfSQ-eaSJ7rrp8RSqvxkLYMWIQCAOY",
+      authDomain: "andsign-a18bf.firebaseapp.com",
+      projectId: "andsign-a18bf",
+      storageBucket: "andsign-a18bf.firebasestorage.app",
+      messagingSenderId: "682561818074",
+      appId: "1:682561818074:web:279fcbe5b934d5d1d844e3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Utility to extract projectId from URL
+    function getProjectIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("projectId");
+    }
+
+    function updateSummaryPage(data) {
+      document.getElementById("docTitle").textContent = data.title;
+      document.getElementById("docVersion").textContent = "Version: " + data.version;
+
+      const allSigned = data.signatories.every(s => s.signed);
+      const someSigned = data.signatories.some(s => s.signed);
+      const light = document.getElementById("trafficLight");
+
+      if (allSigned) {
+        light.classList.add("bg-green-500");
+      } else if (someSigned) {
+        light.classList.add("bg-yellow-400");
+      } else {
+        light.classList.add("bg-red-500");
+      }
+
+      // Signatory Table
+      const table = document.getElementById("signatoryTable");
+      table.innerHTML = "";
+      data.signatories.forEach(s => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td class="p-2 border-t">${s.role}</td>
+          <td class="p-2 border-t">${s.name}</td>
+          <td class="p-2 border-t text-center text-xl">${s.signed ? "✅" : "❌"}</td>
+        `;
+        table.appendChild(row);
+      });
+
+      // QR Code SVG
+      const qr = new QRCode({
+        content: window.location.href,
+        padding: 0,
+        width: 128,
+        height: 128,
+        color: "#000000",
+        background: "#ffffff",
+        ecl: "M"
+      });
+
+      document.getElementById("qr-svg").innerHTML = qr.svg();
+    }
+
+    async function loadProject() {
+      const projectId = getProjectIdFromUrl();
+      if (!projectId) {
+        alert("Missing projectId in URL");
+        return;
+      }
+
+      try {
+        const docRef = doc(db, "projects", projectId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          updateSummaryPage(docSnap.data());
+        } else {
+          alert("Project not found.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error loading project.");
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", loadProject);
+  </script>
+
   <style>
     @media print {
       button { display: none; }
@@ -33,7 +129,7 @@
           </tr>
         </thead>
         <tbody id="signatoryTable">
-          <!-- Populated by JS -->
+          <!-- Filled by JS -->
         </tbody>
       </table>
     </section>
