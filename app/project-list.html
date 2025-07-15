@@ -5,6 +5,80 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Project List - AndSign</title>
   <link rel="stylesheet" href="../css/app.css" />
+  <style>
+    main {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+
+    .project-list h2 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 0.5rem;
+    }
+
+    #project-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    #project-list li {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #project-list li strong {
+      font-size: 1.1rem;
+      color: #333;
+    }
+
+    #project-list li a {
+      background-color: #007bff;
+      color: white;
+      padding: 0.5rem 1rem;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    #project-list li a:hover {
+      background-color: #0056b3;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background-color: #333;
+      color: white;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+    }
+
+    #logout-btn {
+      background-color: #ff5c5c;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    #logout-btn:hover {
+      background-color: #cc0000;
+    }
+  </style>
 </head>
 <body>
 
@@ -55,7 +129,10 @@
 
           const item = document.createElement("li");
           item.innerHTML = `
-            <strong>${project.name}</strong> (v${project.version}) 
+            <div>
+              <strong>${project.name}</strong> <br/>
+              Version: <code>v${project.version}</code>
+            </div>
             <a href="summary.html?id=${projectId}">View Summary</a>
           `;
           projectList.appendChild(item);
