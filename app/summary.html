@@ -2,170 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Project Summary - AndSign</title>
-  <link rel="stylesheet" href="../css/app.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document Summary - AndSign</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/dist/qrcode.min.js"></script>
+  <script defer src="summary.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    main {
-      max-width: 700px;
-      margin: 2rem auto;
-      padding: 1rem;
-    }
-
-    .status-box {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-
-    .status-dot {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-    }
-
-    .status-dot.red { background: red; }
-    .status-dot.amber { background: orange; }
-    .status-dot.green { background: green; }
-
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    li {
-      margin: 0.5rem 0;
-      font-size: 1.1rem;
-    }
-
-    li.signed::before {
-      content: "✅ ";
-    }
-
-    li.unsigned::before {
-      content: "❌ ";
-    }
-
-    .qr-container {
-      text-align: center;
-      margin-top: 2rem;
-    }
-
     @media print {
-      #print-btn {
-        display: none;
-      }
-    }
-
-    #print-btn {
-      margin-top: 1rem;
-      background: #007bff;
-      color: white;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    #print-btn:hover {
-      background: #0056b3;
+      button { display: none; }
     }
   </style>
 </head>
-<body>
+<body class="bg-white text-gray-900 p-4 print:p-8">
 
-  <main>
-    <h1 id="project-title">Loading...</h1>
-    <div class="status-box">
-      <div class="status-dot" id="rag-dot"></div>
-      <span id="rag-label">Status: Loading...</span>
-    </div>
+  <div class="max-w-3xl mx-auto">
+    <header class="text-center mb-8">
+      <h1 class="text-3xl font-bold" id="docTitle">Loading...</h1>
+      <p class="text-xl text-gray-700" id="docVersion">Version: —</p>
+      <div id="trafficLight" class="w-6 h-6 rounded-full mx-auto mt-2"></div>
+    </header>
 
-    <ul id="roles-list"></ul>
+    <section>
+      <h2 class="text-xl font-semibold mb-2">Signatory Status</h2>
+      <table class="w-full border border-gray-300 text-left">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="p-2 border-b">Role</th>
+            <th class="p-2 border-b">Name</th>
+            <th class="p-2 border-b text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody id="signatoryTable">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </section>
 
-    <div class="qr-container">
-      <div id="qr-code"></div>
-      <button id="print-btn" onclick="window.print()">🖨️ Print Summary</button>
-    </div>
-  </main>
+    <section class="mt-10 text-center">
+      <h2 class="text-xl font-semibold mb-2">Verify This Summary</h2>
+      <div id="qr-svg" class="flex justify-center mt-4"></div>
+      <p class="text-sm text-gray-600 mt-2">Scan the QR code to view this summary online</p>
+    </section>
 
-  <!-- Firebase + QR Logic -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-    import QRCode from "https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/+esm";
+    <footer class="mt-10 text-center">
+      <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl shadow">
+        Print
+      </button>
+    </footer>
+  </div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCByZfSQ-eaSJ7rrp8RSqvxkLYMWIQCAOY",
-      authDomain: "andsign-a18bf.firebaseapp.com",
-      projectId: "andsign-a18bf",
-      storageBucket: "andsign-a18bf.appspot.com",
-      messagingSenderId: "682561818074",
-      appId: "1:682561818074:web:279fcbe5b934d5d1d844e3"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const params = new URLSearchParams(window.location.search);
-    const projectId = params.get("id");
-
-    if (!projectId) {
-      document.getElementById("project-title").textContent = "Invalid Project ID";
-    } else {
-      const docRef = doc(db, "projects", projectId);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const project = docSnap.data();
-
-        // Set title
-        document.getElementById("project-title").textContent = `${project.name} (v${project.version})`;
-
-        // Display roles
-        const rolesList = document.getElementById("roles-list");
-        project.roles.forEach(role => {
-          const li = document.createElement("li");
-          li.textContent = role.name;
-          li.classList.add(role.signed ? "signed" : "unsigned");
-          rolesList.appendChild(li);
-        });
-
-        // RAG Status
-        const signedCount = project.roles.filter(r => r.signed).length;
-        const total = project.roles.length;
-        const dot = document.getElementById("rag-dot");
-        const label = document.getElementById("rag-label");
-
-        if (signedCount === total) {
-          dot.classList.add("green");
-          label.textContent = "Status: Green – All signed";
-        } else if (signedCount === 0) {
-          dot.classList.add("red");
-          label.textContent = "Status: Red – No signatures";
-        } else {
-          dot.classList.add("amber");
-          label.textContent = `Status: Amber – ${signedCount} of ${total} signed`;
-        }
-
-        // QR Code
-        const summaryUrl = `${window.location.origin}${window.location.pathname}?id=${projectId}`;
-        const qr = new QRCode({
-          content: summaryUrl,
-          padding: 0,
-          width: 128,
-          height: 128,
-          color: "#000000",
-          background: "#ffffff",
-          ecl: "M"
-        });
-
-        document.getElementById("qr-code").innerHTML = qr.svg();
-      } else {
-        document.getElementById("project-title").textContent = "Project not found.";
-      }
-    }
-  </script>
 </body>
 </html>
