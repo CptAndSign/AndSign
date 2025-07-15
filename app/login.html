@@ -29,14 +29,15 @@ import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/fir
 
 
     // 🔁 REPLACE THIS with your actual Firebase config:
-  const firebaseConfig = {
-    apiKey: "AIzaSyAjOE-D9NNV-YPSKoVni-ACCUpKF7B9Ay8",
-    authDomain: "andsign-app.firebaseapp.com",
-    projectId: "andsign-app",
-    storageBucket: "andsign-app.firebasestorage.app",
-    messagingSenderId: "644185418821",
-    appId: "1:644185418821:web:1941cdd7fc21742d06c72c"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyAjOE-D9NNV-YPSKoVni-ACCUpKF7B9Ay8",
+  authDomain: "andsign-app.firebaseapp.com",
+  projectId: "andsign-app",
+  storageBucket: "andsign-app.appspot.com", 
+  messagingSenderId: "644185418821",
+  appId: "1:644185418821:web:1941cdd7fc21742d06c72c"
+};
+
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
