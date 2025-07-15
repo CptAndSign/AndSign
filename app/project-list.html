@@ -47,6 +47,7 @@
       const snapshot = await getDocs(collection(db, "projects"));
       snapshot.forEach(doc => {
         const data = doc.data();
+        console.log("Project data:", data);
         const li = document.createElement("li");
 
         li.innerHTML = `
