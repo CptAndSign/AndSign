@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Sign</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCByZfSQ-eaSJ7rrp8RSqvxkLYMWIQCAOY",
+      authDomain: "andsign-a18bf.firebaseapp.com",
+      projectId: "andsign-a18bf",
+      storageBucket: "andsign-a18bf.firebasestorage.app",
+      messagingSenderId: "682561818074",
+      appId: "1:682561818074:web:279fcbe5b934d5d1d844e3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function signDocument(projectId, role) {
+      const ref = doc(db, "projects", projectId);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        alert("Project not found.");
+        return;
+      }
+
+      const data = snap.data();
+
+      const updatedSignatories = data.signatories.map(s => {
+        if (s.role === role) {
+          return {
+            ...s,
+            signed: true,
+            signedDate: new Date().toISOString()
+          };
+        }
+        return s;
+      });
+
+      await updateDoc(ref, {
+        signatories: updatedSignatories
+      });
+
+      alert(`Signed successfully as "${role}"`);
+    }
+
+    window.signDocument = signDocument;
+  </script>
+</head>
+<body style="font-family: sans-serif; padding: 2rem;">
+  <h2>Sign-Off Test</h2>
+  <button onclick="signDocument('b2RcROVBFtQpOW3LNhMg', 'Designed')">Sign as Designed</button><br><br>
+  <button onclick="signDocument('b2RcROVBFtQpOW3LNhMg', 'Checked')">Sign as Checked</button><br><br>
+  <button onclick="signDocument('b2RcROVBFtQpOW3LNhMg', 'Approved')">Sign as Approved</button>
+</body>
+</html>
